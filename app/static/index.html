@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  
   <title>TradingBuddy – Options Dashboard</title>
+  
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <link rel="icon" href="favicon.ico" />
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
 
   <!-- External CSS -->
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=3">
 
   <!-- ChartJS -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -16,8 +18,10 @@
 
 <body>
 
-  <div class="header">TradingBuddy</div>
-
+  <div class="header">
+    TradingBuddy
+  <button id="themeToggle" class="theme-btn">🌙</button>
+  </div>
   <!-- CONTROLS -->
   <div class="controls">
     <div>
@@ -39,9 +43,10 @@
     </div>
 
     <div>
-      <label>Strike</label>
-      <input id="strike" type="number" placeholder="e.g. 25800" />
+    <label>Strike</label>
+    <input id="strike" type="number" value="26000" placeholder="e.g. 25800" />
     </div>
+
 
     <div>
       <label>From Date</label>
@@ -63,8 +68,8 @@
 
   <div class="live-container">
     <div class="live-header">
-      <h2>Live Option Data</h2>
-      <div id="niftyLive" class="live-nifty">NIFTY Spot (Live): --</div>
+        <div id="niftyLive" class="live-nifty">NIFTY Spot (Live): --</div>
+        <h2>Live Option Data</h2>
     </div>
 
     <div class="live-grid">
@@ -98,7 +103,7 @@
   </div>
 
   <!-- JS File -->
-  <script src="js/main.js"></script>
+  <script src="/static/js/main.js?v=3"></script>
 
 </body>
 </html>

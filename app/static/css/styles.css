@@ -1,59 +1,151 @@
+/* ======================================================
+   THEME VARIABLES
+====================================================== */
+:root {
+  --bg: #f3f5fb;
+  --card-bg: #ffffff;
+  --text: #1f1f1f;
+  --text-light: #444;
+  --primary: #0b69ff;
+  --border: #d0d0d0;
+  --shadow: rgba(0,0,0,0.08);
+}
+
+.dark-mode {
+  --bg: #0e0e11;
+  --card-bg: #1a1c25;
+  --text: #e8e8e8;
+  --text-light: #bbbbbb;
+  --primary: #3d7cff;
+  --border: #2f313a;
+  --shadow: rgba(0,0,0,0.4);
+}
+
+/* Smooth theme switching */
+body {
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+/* ======================================================
+   GLOBAL
+====================================================== */
 body {
   margin: 0;
   font-family: Inter, Arial, sans-serif;
-  background: #f5f7fb;
-  color: #111;
+  background: var(--bg);
+  color: var(--text);
 }
 
+/* ======================================================
+   HEADER
+====================================================== */
 .header {
-  background: white;
-  padding: 18px 30px;
-  font-size: 24px;
-  font-weight: 700;
-  color: #0b69ff;
-  border-bottom: 1px solid #e5e5e5;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  background: var(--card-bg);
+  padding: 20px 30px;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--primary);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 6px var(--shadow);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
+.theme-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 18px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.theme-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+/* ======================================================
+   CONTROLS PANEL
+====================================================== */
 .controls {
-  margin: 20px auto;
+  margin: 25px auto;
   max-width: 1200px;
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+  background: var(--card-bg);
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 4px 15px var(--shadow);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  gap: 18px;
 }
 
-label { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: block; }
+label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 5px;
+  display: block;
+}
 
 select, input {
   width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background: #fafafa;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
   font-size: 14px;
+  transition: 0.2s;
+}
+
+select:focus,
+input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 6px rgba(11,105,255,0.5);
 }
 
 button {
-  padding: 10px 15px;
+  padding: 11px 18px;
   font-size: 15px;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
+  transition: 0.15s ease-in-out;
 }
-.btn-load { background: #0b69ff; color: white; }
-.btn-reset { background: #6c757d; color: white; }
 
-.full { grid-column: 1 / -1; display: flex; gap: 12px; }
+.btn-load {
+  background: var(--primary);
+  color: white;
+}
+.btn-load:hover {
+  background: #005ce6;
+}
 
+.btn-reset {
+  background: #6c757d;
+  color: white;
+}
+.btn-reset:hover {
+  background: #5a6268;
+}
+
+.full {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 14px;
+}
+
+/* ======================================================
+   LIVE DATA SECTION
+====================================================== */
 .live-container {
   max-width: 1200px;
-  margin: 20px auto;
+  margin: 25px auto;
   padding: 10px;
 }
 
@@ -61,58 +153,108 @@ button {
   text-align: center;
   margin-bottom: 15px;
 }
+
 .live-header h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
+  color: var(--text);
 }
+
 .live-nifty {
   font-size: 22px;
   font-weight: 700;
-  color: #0b69ff;
+  color: var(--primary);
   margin-top: 6px;
 }
 
+/* ======================================================
+   CARDS
+====================================================== */
 .live-grid {
   display: flex;
-  gap: 20px;
+  gap: 22px;
+  justify-content: center;
 }
 
 .card {
   flex: 1;
-  background: white;
-  padding: 20px;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  background: var(--card-bg);
+  padding: 22px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px var(--shadow);
+  min-width: 260px;
+  transition: 0.2s;
+  color: var(--text);
 }
 
-.ratio-card { flex: 0.7; }
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px var(--shadow);
+}
 
+.card h3 {
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ratio-card {
+  flex: 0.8;
+}
+
+/* ======================================================
+   CHARTS
+====================================================== */
 .charts-wrapper {
   max-width: 1200px;
-  margin: 25px auto;
+  margin: 30px auto;
   display: flex;
   gap: 20px;
 }
 
 .chart-box {
   flex: 1;
-  background: white;
-  padding: 18px;
-  border-radius: 12px;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+  background: var(--card-bg);
+  padding: 22px;
+  border-radius: 16px;
+  box-shadow: 0 3px 14px var(--shadow);
 }
 
+.chart-box h3 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 18px;
+}
+
+/* ======================================================
+   RESULT TEXT
+====================================================== */
 #result {
   max-width: 1200px;
   margin: 10px auto;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-light);
 }
 
+/* ======================================================
+   RESPONSIVE
+====================================================== */
 @media (max-width: 900px) {
-  .controls { grid-template-columns: 1fr; }
-  .charts-wrapper { flex-direction: column; }
-  .live-grid { flex-direction: column; }
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .live-grid {
+    flex-direction: column;
+  }
+
+  .charts-wrapper {
+    flex-direction: column;
+  }
 }

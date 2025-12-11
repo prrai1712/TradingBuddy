@@ -1,10 +1,9 @@
 from flask import Flask
 from flask_cors import CORS
 
-
 def create_app():
-    # Flask should serve static files from app/static
-    app = Flask(__name__, static_folder="static", static_url_path="")
+    # Correct static settings
+    app = Flask(__name__, static_folder="static")
 
     # Enable CORS
     CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
@@ -20,12 +19,11 @@ def create_app():
     app.register_blueprint(nifty_bp)
     app.register_blueprint(live_bp)
 
-    # ---------------- STATIC ROUTES (index.html) ----------------
+    # ---------------- STATIC ROUTES ----------------
     @app.route("/")
     def root():
         return app.send_static_file("index.html")
 
-    # Many mobile browsers request /index.html directly
     @app.route("/index.html")
     def index_html():
         return app.send_static_file("index.html")
@@ -35,7 +33,7 @@ def create_app():
     def favicon():
         return app.send_static_file("favicon.ico")
 
-    # Fallback to index.html (IMPORTANT for mobile + Render)
+    # Fallback (only if you're building SPA)
     @app.errorhandler(404)
     def page_not_found(e):
         return app.send_static_file("index.html")
