@@ -7,7 +7,7 @@ import time
 import datetime
 
 app = Flask(__name__, static_folder="static")
-CORS(app)
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 
 @app.route("/")
 def home():
