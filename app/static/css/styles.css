@@ -258,3 +258,145 @@ button {
     flex-direction: column;
   }
 }
+
+
+.top-tabs {
+  display: flex;
+  gap: 10px;
+  background: var(--card-bg, #fff);
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-color, #ccc);
+}
+
+.tab-btn {
+  padding: 10px 18px;
+  border: none;
+  background: var(--card-bg, #eee);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.tab-btn.active {
+  background: #0b69ff;
+  color: white;
+}
+
+.tab-section {
+  display: none;
+  padding: 20px;
+}
+
+.tab-section.active {
+  display: block;
+}
+
+/* SENTIMENT MAIN CARD */
+.sentiment-main-card {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+
+.sentiment-main-card .sentiment-title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.sentiment-main-card .sentiment-score {
+  font-size: 40px;
+  font-weight: 800;
+  margin-top: 10px;
+}
+
+/* GAUGE */
+.sentiment-gauge-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+/* SIGNAL GRID */
+.signal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.signal-item {
+  background: var(--card-bg);
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.signal-item .label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.signal-item .value {
+  font-size: 18px;
+  margin-top: 4px;
+}
+
+.chain-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 15px;
+}
+
+.chain-table th,
+.chain-table td {
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.chain-table thead {
+  background: #eaeef7;
+  font-weight: bold;
+}
+
+.dark-mode .chain-table thead {
+  background: #2a2c35;
+}
+
+.ce-head { background: #d9e8ff; }
+.pe-head { background: #ffd9d9; }
+.strike-head { background: #f1f1f1; }
+
+.dark-mode .ce-head { background: #2b3a4f; }
+.dark-mode .pe-head { background: #4f2b2b; }
+.dark-mode .strike-head { background: #444; }
+
+.atm-row {
+  background: #fff6cd !important;
+  font-weight: bold;
+}
+.dark-mode .atm-row {
+  background: #5c4e1c !important;
+}
+
+.itm-ce {
+  background: #e3f2ff;
+}
+.itm-pe {
+  background: #ffe3e3;
+}
+
+.oi-green { color: #0da60d; font-weight: bold; }
+.oi-red { color: #d80000; font-weight: bold; }
+
+.strike-cell {
+  font-weight: bold;
+  background: #f7f7f7;
+}
+.dark-mode .strike-cell {
+  background: #333;
+}
+

@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  
   <title>TradingBuddy – Options Dashboard</title>
-  
+
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
 
   <!-- External CSS -->
-  <link rel="stylesheet" href="/static/css/styles.css?v=3">
+  <link rel="stylesheet" href="/static/css/styles.css?v=4">
 
   <!-- ChartJS -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -18,92 +17,170 @@
 
 <body>
 
+  <!-- TOP TABS -->
+  <div class="top-tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="chain">Option Chain</button>
+    <button class="tab-btn" data-tab="sentiment">Sentiment</button>
+  </div>
+
+  <!-- HEADER -->
   <div class="header">
     TradingBuddy
-  <button id="themeToggle" class="theme-btn">🌙</button>
-  </div>
-  <!-- CONTROLS -->
-  <div class="controls">
-    <div>
-      <label>Symbol</label>
-      <select id="symbol" onchange="loadExpiryDates()">
-        <option value="NIFTY">NIFTY</option>
-        <option value="BANKNIFTY">BANKNIFTY</option>
-      </select>
-    </div>
-
-    <div>
-      <label>Year</label>
-      <select id="year" onchange="loadExpiryDates()"></select>
-    </div>
-
-    <div>
-      <label>Expiry</label>
-      <select id="expiry" onchange="autoDates()"></select>
-    </div>
-
-    <div>
-    <label>Strike</label>
-    <input id="strike" type="number" value="26000" placeholder="e.g. 25800" />
-    </div>
-
-
-    <div>
-      <label>From Date</label>
-      <input id="fromDate" type="text" />
-    </div>
-
-    <div>
-      <label>To Date</label>
-      <input id="toDate" type="text" />
-    </div>
-
-    <div class="full">
-      <button class="btn-load" onclick="getPrice()">Load Charts</button>
-      <button class="btn-reset" onclick="resetControls()">Reset</button>
-    </div>
+    <button id="themeToggle" class="theme-btn">🌙</button>
   </div>
 
-  <div id="result"></div>
 
-  <div class="live-container">
-    <div class="live-header">
+  <!-- ======================== DASHBOARD TAB ======================== -->
+  <div id="dashboard" class="tab-section active">
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div>
+        <label>Symbol</label>
+        <select id="symbol" onchange="loadExpiryDates()">
+          <option value="NIFTY">NIFTY</option>
+          <option value="BANKNIFTY">BANKNIFTY</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Year</label>
+        <select id="year" onchange="loadExpiryDates()"></select>
+      </div>
+
+      <div>
+        <label>Expiry</label>
+        <select id="expiry" onchange="autoDates()"></select>
+      </div>
+
+      <div>
+        <label>Strike</label>
+        <input id="strike" type="number" value="26000" placeholder="e.g. 25800" />
+      </div>
+
+      <div>
+        <label>From Date</label>
+        <input id="fromDate" type="text" />
+      </div>
+
+      <div>
+        <label>To Date</label>
+        <input id="toDate" type="text" />
+      </div>
+
+      <div class="full">
+        <button class="btn-load" onclick="getPrice()">Load Charts</button>
+        <button class="btn-reset" onclick="resetControls()">Reset</button>
+      </div>
+    </div>
+
+    <div id="result"></div>
+
+    <!-- LIVE DATA -->
+    <div class="live-container">
+      <div class="live-header">
         <div id="niftyLive" class="live-nifty">NIFTY Spot (Live): --</div>
         <h2>Live Option Data</h2>
+      </div>
+
+      <div class="live-grid">
+        <div class="card">
+          <h3 id="ceTitle">-- CE</h3>
+          <div id="ceBox">Loading...</div>
+        </div>
+
+        <div class="card">
+          <h3 id="peTitle">-- PE</h3>
+          <div id="peBox">Loading...</div>
+        </div>
+
+        <div class="card ratio-card">
+          <h3>Ratios</h3>
+          <div id="ratioBox">--</div>
+        </div>
+      </div>
     </div>
 
-    <div class="live-grid">
-      <div class="card">
-        <h3 id="ceTitle">-- CE</h3>
-        <div id="ceBox">Loading...</div>
+    <!-- CHARTS -->
+    <div class="charts-wrapper">
+      <div class="chart-box">
+        <h3>CE + PE Combined (Close)</h3>
+        <canvas id="combinedChart" height="220"></canvas>
       </div>
 
-      <div class="card">
-        <h3 id="peTitle">-- PE</h3>
-        <div id="peBox">Loading...</div>
-      </div>
-
-      <div class="card ratio-card">
-        <h3>Ratios</h3>
-        <div id="ratioBox">--</div>
+      <div class="chart-box">
+        <h3>NIFTY Spot (Close)</h3>
+        <canvas id="niftyChart" height="220"></canvas>
       </div>
     </div>
+
   </div>
+  <!-- ======================== END DASHBOARD TAB ======================== -->
 
-  <div class="charts-wrapper">
-    <div class="chart-box">
-      <h3>CE + PE Combined (Close)</h3>
-      <canvas id="combinedChart" height="220"></canvas>
-    </div>
 
-    <div class="chart-box">
-      <h3>NIFTY Spot (Close)</h3>
-      <canvas id="niftyChart" height="220"></canvas>
-    </div>
+
+  <!-- ======================== OPTION CHAIN TAB ======================== -->
+  <div id="chain" class="tab-section">
+    <h2>Full Option Chain</h2>
+    <div id="chainContainer">Loading...</div>
   </div>
+  <!-- ======================== END OPTION CHAIN TAB ======================== -->
 
-  <!-- JS File -->
-  <script src="/static/js/main.js?v=3"></script>
+
+
+  <!-- ======================== SENTIMENT TAB ======================== -->
+  <div id="sentiment" class="tab-section">
+
+    <h2>Market Sentiment</h2>
+
+    <!-- BIG SENTIMENT CARD -->
+    <div id="sentimentMain" class="sentiment-main-card">
+      <div class="sentiment-title">Analyzing...</div>
+      <div class="sentiment-score">--</div>
+    </div>
+
+    <!-- GAUGE METER -->
+    <div class="sentiment-gauge-wrapper">
+      <canvas id="sentimentGauge" width="260" height="160"></canvas>
+    </div>
+
+    <!-- SIGNAL BREAKDOWN -->
+    <h3>Signal Breakdown</h3>
+    <div id="signalBreakdown" class="signal-grid"></div>
+
+  </div>
+  <!-- ======================== END SENTIMENT TAB ======================== -->
+
+
+    <!-- UTILS -->
+  <script src="/static/js/utils/theme.js?v=1"></script>
+  <script src="/static/js/utils/dates.js?v=1"></script>
+  <script src="/static/js/utils/fetcher.js?v=1"></script>
+
+  <!-- API MODULES -->
+  <script src="/static/js/api/expiry.js?v=1"></script>
+  <script src="/static/js/api/option_price.js?v=1"></script>
+  <script src="/static/js/api/nifty_spot.js?v=1"></script>
+  <script src="/static/js/api/live_data.js?v=1"></script>
+  <script src="/static/js/api/full_chain.js?v=1"></script>
+
+  <!-- UI MODULES -->
+  <script src="/static/js/ui/option_chain_table.js?v=1"></script>
+  <script src="/static/js/ui/sentiment.js?v=1"></script>
+  <script src="/static/js/ui/gauge.js?v=1"></script>
+
+  <!-- CHARTS -->
+  <script src="/static/js/charts/combined_chart.js?v=1"></script>
+  <script src="/static/js/charts/nifty_chart.js?v=1"></script>
+
+  <!-- TABS MUST LOAD AFTER ALL OTHER FUNCTIONS -->
+  <script src="/static/js/ui/tabs.js?v=1"></script>
+
+  <!-- MAIN CONTROLLER -->
+  <script src="/static/js/main.js?v=4"></script>
+
+
 
 </body>
 </html>
