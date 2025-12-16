@@ -1,0 +1,103 @@
+* {
+  box-sizing: border-box;
+  font-family: Inter, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0b0d14;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+/* HERO BACKGROUND */
+.hero {
+  height: 100vh;
+  background: linear-gradient(-45deg, #0b69ff, #1a1c25, #3d7cff, #0e0e11);
+  background-size: 400% 400%;
+  animation: gradientMove 15s ease infinite;
+  position: relative;
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+/* CONTENT */
+.content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+h1 {
+  font-size: 56px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+p {
+  margin-top: 12px;
+  font-size: 18px;
+  color: #cfd3ff;
+}
+
+/* CHARTS */
+.charts {
+  display: flex;
+  gap: 40px;
+  margin: 40px 0;
+  width: 100%;
+  max-width: 900px;
+}
+
+canvas {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+/* BUTTON */
+#enterBtn {
+  margin-top: 30px;
+  padding: 14px 34px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(90deg, #0b69ff, #3d7cff);
+  box-shadow: 0 10px 30px rgba(11, 105, 255, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#enterBtn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(11, 105, 255, 0.8);
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .charts {
+    flex-direction: column;
+  }
+
+  h1 {
+    font-size: 42px;
+  }
+}
