@@ -11,6 +11,15 @@ async function loadLiveData() {
     const res = await fetch(url);
     const data = await res.json();
 
+    // Add strike to data for UI updates
+    data.strike = strike;
+
+    // Update header NIFTY live badge
+    const headerNifty = document.getElementById("headerNiftyLive");
+    if (headerNifty && data.nifty_spot) {
+        headerNifty.textContent = `NIFTY: ${data.nifty_spot}`;
+    }
+
     document.getElementById("ceTitle").textContent = `${strike} CE`;
     document.getElementById("peTitle").textContent = `${strike} PE`;
 
@@ -23,14 +32,14 @@ async function loadLiveData() {
     function format(d) {
         const total_money_value = (Number(d.traded_value) / 1_000_000).toFixed(2);
         return `
-        <p>LTP: <b>${d.ltp}</b></p>
-        <p>Open: ${d.open}</p>
-        <p>High: ${d.high}</p>
-        <p>Low: ${d.low}</p>
-        <p>OI: ${d.oi}</p>
-        <p>OI Change: ${d.oi_change}</p>
-        <p>Total Money Value: ${total_money_value}M</p>
-        <p><small>Updated: ${d.last_update}</small></p>
+        <p><span>LTP:</span> <b>${d.ltp}</b></p>
+        <p><span>Open:</span> <span>${d.open}</span></p>
+        <p><span>High:</span> <span>${d.high}</span></p>
+        <p><span>Low:</span> <span>${d.low}</span></p>
+        <p><span>OI:</span> <span>${d.oi}</span></p>
+        <p><span>OI Change:</span> <span>${d.oi_change}</span></p>
+        <p><span>Turnover:</span> <span>${total_money_value}M</span></p>
+        <p><small style="color: var(--text-light);">Updated: ${d.last_update}</small></p>
       `;
     }
 
@@ -42,8 +51,25 @@ async function loadLiveData() {
     const premium_ratio = (PE.ltp / CE.ltp).toFixed(2);
 
     document.getElementById("ratioBox").innerHTML = `
-      <p><b>OI Ratio (PE/CE):</b> ${oi_ratio}</p>
-      <p><b>Value Ratio (PE/CE):</b> ${value_ratio}</p>
-      <p><b>Premium Ratio (PE/CE):</b> ${premium_ratio}</p>
+      <p><span>OI Ratio (PE/CE):</span> <b>${oi_ratio}</b></p>
+      <p><span>Value Ratio (PE/CE):</span> <b>${value_ratio}</b></p>
+      <p><span>Premium Ratio (PE/CE):</span> <b>${premium_ratio}</b></p>
     `;
+    
+    // Fetch and update PCR analysis
+    fetchPCRAnalysisForLive(symbol, expiry);
+}
+
+async function fetchPCRAnalysisForLive(symbol, expiry) {
+    try {
+        const url = new URL("/pcr_analysis", window.location.origin);
+        url.search = new URLSearchParams({ symbol, expiry });
+        const response = await safeFetch(url);
+        
+        if (response.success) {
+            updatePCRBox(response);
+        }
+    } catch (error) {
+        console.error('Error fetching PCR for live data:', error);
+    }
 }

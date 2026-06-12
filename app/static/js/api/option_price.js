@@ -64,16 +64,40 @@ async function getPrice() {
         document.getElementById("result").innerText = "Charts Loaded ✔";
 
     } catch (err) {
+        console.error('Error in getPrice:', err);
         document.getElementById("result").innerText = "Unexpected error";
     }
 
+    // Load live data
     await loadLiveData();
 
+    // Load full chain and render table
     const fullChain = await loadFullChain();
+    window.currentOptionChain = fullChain;  // Store for filtering
     renderChainTable(fullChain);
 
+    // Compute and render sentiment from option chain
     const sentiment = await computeSentiment(fullChain);
     renderSentimentUI(sentiment);
 
+    // Draw gauge
     drawGauge(sentiment.finalScore);
+    
+    // Update hero signal with sentiment
+    updateHeroSignalFromSentiment(sentiment.finalScore);
+    
+    // Draw mini signal chart
+    const signal = sentiment.finalScore > 0.2 ? 'CALL' : 
+                   sentiment.finalScore < -0.2 ? 'PUT' : 'NEUTRAL';
+    drawMiniSignalChart(signal);
+}
+
+function updateHeroSignalFromSentiment(score) {
+    const signal = score > 0.2 ? 'CALL' : 
+                   score < -0.2 ? 'PUT' : 'NO TRADE';
+    
+    const confidence = Math.abs(score) > 0.5 ? 'HIGH' : 
+                       Math.abs(score) > 0.2 ? 'MEDIUM' : 'LOW';
+    
+    updateHeroSignal(signal, confidence);
 }
