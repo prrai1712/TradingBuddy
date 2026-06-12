@@ -14,12 +14,14 @@ def create_app():
     from app.routes.nifty import nifty_bp
     from app.routes.live_data import live_bp
     from app.routes.full_chain import full_chain_bp
+    from app.routes.analysis import analysis_bp
 
     app.register_blueprint(expiry_bp)
     app.register_blueprint(option_bp)
     app.register_blueprint(nifty_bp)
     app.register_blueprint(live_bp)
     app.register_blueprint(full_chain_bp)
+    app.register_blueprint(analysis_bp)
     
 
     # ---------------- STATIC ROUTES ----------------
