@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TradingBuddy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <link rel="icon" type="image/png" href="/static/favicon.png?v=3">
+  <!-- Landing CSS -->
+  <link rel="stylesheet" href="/static/landing/landing.css" />
+
+  <!-- ChartJS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <div class="hero">
+    <div class="overlay"></div>
+
+    <div class="content">
+      <h1>TradingBuddy</h1>
+      <p>Visualise markets. Trade with clarity.</p>
+
+      <div class="charts">
+        <canvas id="lineChart"></canvas>
+        <canvas id="barChart"></canvas>
+      </div>
+
+      <button id="enterBtn">Enter Dashboard →</button>
+    </div>
+  </div>
+
+  <!-- Landing JS -->
+  <script src="/static/landing/landing.js"></script>
+</body>
+</html>

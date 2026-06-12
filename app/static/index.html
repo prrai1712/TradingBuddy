@@ -6,7 +6,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
+  <link rel="icon" type="image/x-icon" href="/static/favicon.png?v=2">
 
   <!-- External CSS -->
   <link rel="stylesheet" href="/static/css/styles.css?v=4">
@@ -115,72 +115,8 @@
       </div>
     </div>
 
-  </div>
-  <!-- ======================== END DASHBOARD TAB ======================== -->
-
-
-
-  <!-- ======================== OPTION CHAIN TAB ======================== -->
-  <div id="chain" class="tab-section">
-    <h2>Full Option Chain</h2>
-    <div id="chainContainer">Loading...</div>
-  </div>
-  <!-- ======================== END OPTION CHAIN TAB ======================== -->
-
-
-
-  <!-- ======================== SENTIMENT TAB ======================== -->
-  <div id="sentiment" class="tab-section">
-
-    <h2>Market Sentiment</h2>
-
-    <!-- BIG SENTIMENT CARD -->
-    <div id="sentimentMain" class="sentiment-main-card">
-      <div class="sentiment-title">Analyzing...</div>
-      <div class="sentiment-score">--</div>
-    </div>
-
-    <!-- GAUGE METER -->
-    <div class="sentiment-gauge-wrapper">
-      <canvas id="sentimentGauge" width="260" height="160"></canvas>
-    </div>
-
-    <!-- SIGNAL BREAKDOWN -->
-    <h3>Signal Breakdown</h3>
-    <div id="signalBreakdown" class="signal-grid"></div>
-
-  </div>
-  <!-- ======================== END SENTIMENT TAB ======================== -->
-
-
-    <!-- UTILS -->
-  <script src="/static/js/utils/theme.js?v=1"></script>
-  <script src="/static/js/utils/dates.js?v=1"></script>
-  <script src="/static/js/utils/fetcher.js?v=1"></script>
-
-  <!-- API MODULES -->
-  <script src="/static/js/api/expiry.js?v=1"></script>
-  <script src="/static/js/api/option_price.js?v=1"></script>
-  <script src="/static/js/api/nifty_spot.js?v=1"></script>
-  <script src="/static/js/api/live_data.js?v=1"></script>
-  <script src="/static/js/api/full_chain.js?v=1"></script>
-
-  <!-- UI MODULES -->
-  <script src="/static/js/ui/option_chain_table.js?v=1"></script>
-  <script src="/static/js/ui/sentiment.js?v=1"></script>
-  <script src="/static/js/ui/gauge.js?v=1"></script>
-
-  <!-- CHARTS -->
-  <script src="/static/js/charts/combined_chart.js?v=1"></script>
-  <script src="/static/js/charts/nifty_chart.js?v=1"></script>
-
-  <!-- TABS MUST LOAD AFTER ALL OTHER FUNCTIONS -->
-  <script src="/static/js/ui/tabs.js?v=1"></script>
-
-  <!-- MAIN CONTROLLER -->
-  <script src="/static/js/main.js?v=4"></script>
-
-
+  <!-- Load ES MODULES -->
+  <script type="module" src="/static/js/main.js?v=3"></script>
 
 </body>
 </html>
