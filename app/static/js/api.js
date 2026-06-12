@@ -11,9 +11,9 @@ export function buildPEURL(params) {
     return url;
 }
 
-export function buildNiftyURL(symbol, fromDate, toDate) {
+export function buildNiftyURL(symbol, fromDate, toDate, expiry, strike) {
     const url = new URL("/nifty_spot", window.location.origin);
-    url.search = new URLSearchParams({ symbol, fromDate, toDate });
+    url.search = new URLSearchParams({ symbol, fromDate, toDate, expiry, strike });
     return url;
 }
 
