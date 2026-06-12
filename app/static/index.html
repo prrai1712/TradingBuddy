@@ -2,185 +2,408 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>TradingBuddy – Options Dashboard</title>
-
+  <title>TradingBuddy – AI Trading Signals Dashboard</title>
+  
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
+  
   <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2">
-
+  
   <!-- External CSS -->
-  <link rel="stylesheet" href="/static/css/styles.css?v=4">
-
+  <link rel="stylesheet" href="/static/css/styles.css?v=5">
+  
   <!-- ChartJS -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
-
-  <!-- TOP TABS -->
-  <div class="top-tabs">
-    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-    <button class="tab-btn" data-tab="chain">Option Chain</button>
-    <button class="tab-btn" data-tab="sentiment">Sentiment</button>
-  </div>
-
-  <!-- HEADER -->
-  <div class="header">
-    TradingBuddy
-    <button id="themeToggle" class="theme-btn">🌙</button>
-  </div>
-
-
-  <!-- ======================== DASHBOARD TAB ======================== -->
-  <div id="dashboard" class="tab-section active">
-
-    <!-- CONTROLS -->
-    <div class="controls">
-      <div>
-        <label>Symbol</label>
-        <select id="symbol" onchange="loadExpiryDates()">
-          <option value="NIFTY">NIFTY</option>
-          <option value="BANKNIFTY">BANKNIFTY</option>
-        </select>
-      </div>
-
-      <div>
-        <label>Year</label>
-        <select id="year" onchange="loadExpiryDates()"></select>
-      </div>
-
-      <div>
-        <label>Expiry</label>
-        <select id="expiry" onchange="autoDates()"></select>
-      </div>
-
-      <div>
-        <label>Strike</label>
-        <input id="strike" type="number" value="26000" placeholder="e.g. 25800" />
-      </div>
-
-      <div>
-        <label>From Date</label>
-        <input id="fromDate" type="text" />
-      </div>
-
-      <div>
-        <label>To Date</label>
-        <input id="toDate" type="text" />
-      </div>
-
-      <div class="full">
-        <button class="btn-load" onclick="getPrice()">Load Charts</button>
-        <button class="btn-reset" onclick="resetControls()">Reset</button>
-      </div>
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">📊</span>
+      <span class="logo-text">TradingBuddy</span>
     </div>
+    
+    <nav class="nav-menu">
+      <button class="nav-btn active" data-tab="dashboard">
+        <span class="nav-icon">🏠</span>
+        Dashboard
+      </button>
+      <button class="nav-btn" data-tab="signals">
+        <span class="nav-icon">🎯</span>
+        Trading Signals
+      </button>
+      <button class="nav-btn" data-tab="chain">
+        <span class="nav-icon">⛓️</span>
+        Option Chain
+      </button>
+      <button class="nav-btn" data-tab="sentiment">
+        <span class="nav-icon">📈</span>
+        Market Sentiment
+      </button>
+      <button class="nav-btn" data-tab="technical">
+        <span class="nav-icon">📉</span>
+        Technical Analysis
+      </button>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <button id="themeToggle" class="theme-btn-sidebar">🌙 Dark Mode</button>
+    </div>
+  </aside>
 
-    <div id="result"></div>
-
-    <!-- LIVE DATA -->
-    <div class="live-container">
-      <div class="live-header">
-        <div id="niftyLive" class="live-nifty">NIFTY Spot (Live): --</div>
-        <h2>Live Option Data</h2>
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <!-- TOP HEADER -->
+    <header class="top-header">
+      <div class="header-left">
+        <h1>AI-Powered Trading Dashboard</h1>
+        <p class="subtitle">Real-time signals based on comprehensive market analysis</p>
       </div>
-
-      <div class="live-grid">
-        <div class="card">
-          <h3 id="ceTitle">-- CE</h3>
-          <div id="ceBox">Loading...</div>
+      <div class="header-right">
+        <div class="market-status">
+          <span class="status-dot"></span>
+          Market Open
         </div>
+        <div id="liveNiftyBadge" class="live-nifty-badge">NIFTY: --</div>
+      </div>
+    </header>
 
-        <div class="card">
-          <h3 id="peTitle">-- PE</h3>
-          <div id="peBox">Loading...</div>
+    <!-- ======================== DASHBOARD TAB ======================== -->
+    <section id="dashboard" class="tab-section active">
+      
+      <!-- HERO SIGNAL CARD -->
+      <div class="signal-hero-card">
+        <div class="signal-hero-content">
+          <span id="heroSignalBadge" class="signal-badge">SIGNAL</span>
+          <h2 id="heroSignalTitle" class="signal-title">Current Trading Signal</h2>
+          <div id="heroSignalValue" class="signal-value">--</div>
+          <p id="heroConfidence" class="signal-confidence">Confidence: --</p>
         </div>
-
-        <div class="card ratio-card">
-          <h3>Ratios</h3>
-          <div id="ratioBox">--</div>
+        <div class="signal-chart-mini">
+          <canvas id="miniSignalChart"></canvas>
         </div>
       </div>
-    </div>
 
-    <!-- CHARTS -->
-    <div class="charts-wrapper">
-      <div class="chart-box">
-        <h3>CE + PE Combined (Close)</h3>
-        <canvas id="combinedChart" height="220"></canvas>
+      <!-- CONTROLS PANEL -->
+      <div class="controls-panel">
+        <div class="controls-grid">
+          <div class="control-group">
+            <label><span class="label-icon">📊</span> Symbol</label>
+            <select id="symbol" onchange="loadExpiryDates()">
+              <option value="NIFTY">NIFTY</option>
+              <option value="BANKNIFTY">BANKNIFTY</option>
+              <option value="FINNIFTY">FINNIFTY</option>
+            </select>
+          </div>
+          
+          <div class="control-group">
+            <label><span class="label-icon">📅</span> Year</label>
+            <select id="year" onchange="loadExpiryDates()"></select>
+          </div>
+          
+          <div class="control-group">
+            <label><span class="label-icon">⏰</span> Expiry</label>
+            <select id="expiry" onchange="autoDates()"></select>
+          </div>
+          
+          <div class="control-group">
+            <label><span class="label-icon">🎯</span> Strike</label>
+            <input id="strike" type="number" value="26000" placeholder="e.g. 25800" />
+          </div>
+          
+          <div class="control-group">
+            <label><span class="label-icon">📆</span> From Date</label>
+            <input id="fromDate" type="text" placeholder="DD-MM-YYYY" />
+          </div>
+          
+          <div class="control-group">
+            <label><span class="label-icon">📆</span> To Date</label>
+            <input id="toDate" type="text" placeholder="DD-MM-YYYY" />
+          </div>
+        </div>
+        
+        <div class="controls-actions">
+          <button class="btn-load" onclick="getPrice()">🚀 Load Charts & Signals</button>
+          <button class="btn-reset" onclick="resetControls()">🔄 Reset</button>
+        </div>
       </div>
 
-      <div class="chart-box">
-        <h3>NIFTY Spot (Close)</h3>
-        <canvas id="niftyChart" height="220"></canvas>
+      <!-- LIVE DATA CARDS -->
+      <div class="live-container">
+        <div class="live-header">
+          <h2>Live Option Data</h2>
+          <div id="niftyLive" class="live-nifty">NIFTY Spot (Live): --</div>
+        </div>
+
+        <div class="live-grid">
+          <div class="card">
+            <h3 id="ceTitle">-- CE</h3>
+            <div id="ceBox">Loading...</div>
+          </div>
+
+          <div class="card">
+            <h3 id="peTitle">-- PE</h3>
+            <div id="peBox">Loading...</div>
+          </div>
+
+          <div class="card ratio-card">
+            <h3>Ratios Analysis</h3>
+            <div id="ratioBox">--</div>
+          </div>
+          
+          <div class="card ratio-card">
+            <h3>PCR Analysis</h3>
+            <div id="pcrBox">--</div>
+          </div>
+        </div>
       </div>
-    </div>
 
-  </div>
-  <!-- ======================== END DASHBOARD TAB ======================== -->
+      <!-- CHARTS SECTION -->
+      <div class="charts-wrapper">
+        <div class="chart-box">
+          <h3>CE + PE Combined (Close)</h3>
+          <canvas id="combinedChart" height="220"></canvas>
+        </div>
 
+        <div class="chart-box">
+          <h3>NIFTY Spot (Close)</h3>
+          <canvas id="niftyChart" height="220"></canvas>
+        </div>
+      </div>
 
-
-  <!-- ======================== OPTION CHAIN TAB ======================== -->
-  <div id="chain" class="tab-section">
-    <h2>Full Option Chain</h2>
-    <div id="chainContainer">Loading...</div>
-  </div>
-  <!-- ======================== END OPTION CHAIN TAB ======================== -->
-
-
-
-  <!-- ======================== SENTIMENT TAB ======================== -->
-  <div id="sentiment" class="tab-section">
-
-    <h2>Market Sentiment</h2>
-
-    <!-- BIG SENTIMENT CARD -->
-    <div id="sentimentMain" class="sentiment-main-card">
-      <div class="sentiment-title">Analyzing...</div>
-      <div class="sentiment-score">--</div>
-    </div>
-
-    <!-- GAUGE METER -->
-    <div class="sentiment-gauge-wrapper">
-      <canvas id="sentimentGauge" width="260" height="160"></canvas>
-    </div>
-
-    <!-- SIGNAL BREAKDOWN -->
-    <h3>Signal Breakdown</h3>
-    <div id="signalBreakdown" class="signal-grid"></div>
-
-  </div>
-  <!-- ======================== END SENTIMENT TAB ======================== -->
+    </section>
+    <!-- ======================== END DASHBOARD TAB ======================== -->
 
 
-    <!-- UTILS -->
+    <!-- ======================== TRADING SIGNALS TAB ======================== -->
+    <section id="signals" class="tab-section">
+      
+      <h2>🎯 AI Trading Signals</h2>
+      
+      <!-- MAIN SIGNAL DISPLAY -->
+      <div class="signal-main-card">
+        <div class="signal-indicator" id="mainSignalIndicator">
+          <div class="indicator-ring"></div>
+          <div class="indicator-icon" id="mainSignalIcon">⏳</div>
+        </div>
+        
+        <div class="signal-details">
+          <div class="signal-header">
+            <span class="signal-label">Recommended Action</span>
+            <h3 id="mainSignalText" class="signal-main-text">ANALYZING</h3>
+          </div>
+          
+          <div class="signal-metrics">
+            <div class="metric-item">
+              <span class="metric-label">Confidence</span>
+              <span id="signalConfidence" class="metric-value">--</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Sentiment Score</span>
+              <span id="signalSentimentScore" class="metric-value">--</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Underlying Value</span>
+              <span id="signalUnderlying" class="metric-value">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECOMMENDED STRIKES & KEY LEVELS -->
+      <div class="analysis-grid">
+        <div class="analysis-card">
+          <h3>🎯 Recommended Strikes</h3>
+          <div id="signalRecommendations" class="levels-grid">
+            <p>Loading recommendations...</p>
+          </div>
+        </div>
+        
+        <div class="analysis-card">
+          <h3>📊 Key Levels</h3>
+          <div id="keyLevelsGrid" class="levels-grid">
+            <p>Loading key levels...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MARKET SENTIMENT IMPACT -->
+      <div class="analysis-card full-width">
+        <h3>🌍 Market Sentiment Impact</h3>
+        <div id="sentimentBadges" class="sentiment-badges">
+          <p>Loading sentiment data...</p>
+        </div>
+      </div>
+
+      <!-- ANALYSIS SUMMARY -->
+      <div class="analysis-card full-width" id="signalSummary">
+        <h4>Analysis Summary</h4>
+        <p>Loading comprehensive analysis...</p>
+      </div>
+
+    </section>
+    <!-- ======================== END TRADING SIGNALS TAB ======================== -->
+
+
+    <!-- ======================== OPTION CHAIN TAB ======================== -->
+    <section id="chain" class="tab-section">
+      
+      <h2>⛓️ Full Option Chain</h2>
+      
+      <div class="chain-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="itm">ITM</button>
+        <button class="filter-btn" data-filter="otm">OTM</button>
+        <button class="filter-btn" data-filter="atm">ATM</button>
+      </div>
+      
+      <div id="chainContainer" class="chain-table-wrapper">
+        <div class="loading-spinner">Loading option chain data...</div>
+      </div>
+      
+    </section>
+    <!-- ======================== END OPTION CHAIN TAB ======================== -->
+
+
+    <!-- ======================== MARKET SENTIMENT TAB ======================== -->
+    <section id="sentiment" class="tab-section">
+      
+      <h2>📈 Market Sentiment Analysis</h2>
+      
+      <!-- MAIN SENTIMENT CARD -->
+      <div class="sentiment-main-card">
+        <div class="sentiment-gauge-wrapper">
+          <canvas id="sentimentGauge" width="260" height="160"></canvas>
+        </div>
+        
+        <div class="sentiment-info">
+          <div class="sentiment-score-display">
+            <span class="sentiment-label">Combined Score</span>
+            <span id="sentimentScoreValue" class="sentiment-big-score">--</span>
+          </div>
+          <div id="sentimentBiasDisplay" class="sentiment-bias">--</div>
+          <div id="sentimentConfidence" class="sentiment-confidence">Confidence: --</div>
+        </div>
+      </div>
+
+      <!-- SENTIMENT BREAKDOWN -->
+      <div class="sentiment-breakdown-grid">
+        <div class="sentiment-card">
+          <h3>🌐 Global Sentiment</h3>
+          <div id="globalSentimentContent" class="sentiment-details">
+            <p>Loading global sentiment...</p>
+          </div>
+        </div>
+        
+        <div class="sentiment-card">
+          <h3>🇮🇳 Indian Sentiment</h3>
+          <div id="indianSentimentContent" class="sentiment-details">
+            <p>Loading Indian sentiment...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- KEY FACTORS -->
+      <div class="analysis-card full-width">
+        <h3>🔑 Key Factors Affecting Sentiment</h3>
+        <div id="keyFactorsList" class="factors-list">
+          <p>Analyzing market factors...</p>
+        </div>
+      </div>
+
+      <!-- OPTION CHAIN SENTIMENT INDICATORS -->
+      <div class="analysis-grid">
+        <div class="analysis-card">
+          <h3>📊 PCR Analysis</h3>
+          <div id="pcrAnalysisContent" class="pcr-details">
+            <p>Loading PCR data...</p>
+          </div>
+        </div>
+        
+        <div class="analysis-card">
+          <h3>💢 Max Pain Point</h3>
+          <div id="maxPainContent" class="maxpain-details">
+            <p>Calculating max pain...</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+    <!-- ======================== END MARKET SENTIMENT TAB ======================== -->
+
+
+    <!-- ======================== TECHNICAL ANALYSIS TAB ======================== -->
+    <section id="technical" class="tab-section">
+      
+      <h2>📉 Technical Analysis</h2>
+      
+      <div class="technical-grid">
+        <div class="technical-card">
+          <h3>📊 Moving Averages</h3>
+          <div id="movingAveragesContent" class="technical-details">
+            <p>Loading moving averages...</p>
+          </div>
+        </div>
+        
+        <div class="technical-card">
+          <h3>📈 Trend Analysis</h3>
+          <div id="trendContent" class="technical-details">
+            <p>Analyzing trend...</p>
+          </div>
+        </div>
+        
+        <div class="technical-card">
+          <h3>🕯️ Candlestick Patterns</h3>
+          <div id="patternsContent" class="technical-details">
+            <p>Detecting patterns...</p>
+          </div>
+        </div>
+        
+        <div class="technical-card">
+          <h3>💪 RSI Indicator</h3>
+          <div id="rsiContent" class="technical-details">
+            <p>Calculating RSI...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRICE HISTORY CHART -->
+      <div class="analysis-card full-width">
+        <h3>📊 Historical Price Chart</h3>
+        <canvas id="historicalChart" height="300"></canvas>
+      </div>
+
+    </section>
+    <!-- ======================== END TECHNICAL ANALYSIS TAB ======================== -->
+
+  </main>
+
+  <!-- API MODULES -->
   <script src="/static/js/utils/theme.js?v=1"></script>
   <script src="/static/js/utils/dates.js?v=1"></script>
   <script src="/static/js/utils/fetcher.js?v=1"></script>
-
-  <!-- API MODULES -->
+  
   <script src="/static/js/api/expiry.js?v=1"></script>
   <script src="/static/js/api/option_price.js?v=1"></script>
   <script src="/static/js/api/nifty_spot.js?v=1"></script>
   <script src="/static/js/api/live_data.js?v=1"></script>
   <script src="/static/js/api/full_chain.js?v=1"></script>
-
+  <script src="/static/js/api/analysis.js?v=1"></script>
+  
   <!-- UI MODULES -->
+  <script src="/static/js/ui/tabs.js?v=1"></script>
   <script src="/static/js/ui/option_chain_table.js?v=1"></script>
   <script src="/static/js/ui/sentiment.js?v=1"></script>
   <script src="/static/js/ui/gauge.js?v=1"></script>
-
+  <script src="/static/js/ui/signals.js?v=1"></script>
+  
   <!-- CHARTS -->
   <script src="/static/js/charts/combined_chart.js?v=1"></script>
   <script src="/static/js/charts/nifty_chart.js?v=1"></script>
-
-  <!-- TABS MUST LOAD AFTER ALL OTHER FUNCTIONS -->
-  <script src="/static/js/ui/tabs.js?v=1"></script>
-
+  <script src="/static/js/charts/mini_signal_chart.js?v=1"></script>
+  
   <!-- MAIN CONTROLLER -->
-  <script src="/static/js/main.js?v=4"></script>
-
-
+  <script src="/static/js/main.js?v=5"></script>
 
 </body>
 </html>

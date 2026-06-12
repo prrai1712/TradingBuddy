@@ -4,7 +4,7 @@
 function loadScript(path) {
     return new Promise((resolve, reject) => {
         const s = document.createElement("script");
-        s.src = path + "?v=4";   // cache-bust
+        s.src = path + "?v=5";   // cache-bust
         s.onload = resolve;
         s.onerror = reject;
         document.body.appendChild(s);
@@ -25,14 +25,17 @@ async function loadModules() {
         "/static/js/api/nifty_spot.js",
         "/static/js/api/live_data.js",
         "/static/js/api/full_chain.js",
+        "/static/js/api/analysis.js",
 
         "/static/js/ui/tabs.js",
         "/static/js/ui/option_chain_table.js",
         "/static/js/ui/sentiment.js",
         "/static/js/ui/gauge.js",
+        "/static/js/ui/signals.js",
 
         "/static/js/charts/combined_chart.js",
         "/static/js/charts/nifty_chart.js",
+        "/static/js/charts/mini_signal_chart.js",
     ];
 
     for (const file of files) {
@@ -52,9 +55,18 @@ function initApp() {
     loadYears();
     loadExpiryDates();
 
+    // Load initial trading signal and market sentiment
+    setTimeout(() => {
+        fetchTradingSignal();
+        fetchMarketSentiment();
+    }, 1000);
+
     // expose to window for HTML buttons
     window.getPrice = getPrice;
     window.resetControls = resetControls;
+    window.fetchPCRAnalysis = fetchPCRAnalysis;
+    window.fetchMaxPain = fetchMaxPain;
+    window.fetchHistoricalAnalysis = fetchHistoricalAnalysis;
 }
 
 /* ===============================
