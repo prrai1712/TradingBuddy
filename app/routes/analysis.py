@@ -6,8 +6,9 @@ Provides endpoints for option chain analysis, sentiment analysis, and trading si
 
 from flask import Blueprint, request, jsonify
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.utils.nse_headers import get_nse_headers
+from app.utils.option_chain_helper import fetch_unblocked_option_chain
 from app.utils.option_analyzer import (
     OptionChainAnalyzer, 
     HistoricalPatternAnalyzer, 
@@ -19,42 +20,146 @@ from app.utils.news_sentiment import NewsSentimentAnalyzer, get_market_sentiment
 analysis_bp = Blueprint("analysis", __name__)
 
 
+def _get_default_expiry(symbol: str) -> str:
+    # Fetch active expiry dates for current year to get a default
+    current_year = str(datetime.now().year)
+    url = f"https://www.nseindia.com/api/historicalOR/meta/foCPV/expireDts?instrument=OPTIDX&symbol={symbol}&year={current_year}"
+    headers = {
+        "user-agent": "Mozilla/5.0",
+        "referer": "https://www.nseindia.com/",
+    }
+    try:
+        resp = requests.get(url, headers=headers, timeout=5)
+        dates = resp.json().get("expiresDts", [])
+        if dates:
+            exp_raw = dates[0] # e.g. "02-JAN-2025"
+            d, mmm, y = exp_raw.split("-")
+            months = [
+                "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+                "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+            ]
+            m = str(months.index(mmm.upper()) + 1).zfill(2)
+            return f"{y}-{m}-{d}"
+    except Exception as e:
+        print(f"Error fetching default expiry: {e}")
+    # Return a fallback default expiry
+    return "2026-06-25"
+
+
+def _fetch_historical_data_raw(symbol: str, from_date: str, to_date: str, expiry: str = None) -> list:
+    """Fetch raw historical data using unblocked foCPV endpoint"""
+    if not expiry:
+        expiry = _get_default_expiry(symbol)
+        
+    try:
+        y, m, d = expiry.split("-")
+        months = [
+            "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+            "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+        ]
+        expiry_final = f"{d}-{months[int(m)-1]}-{y}"
+    except:
+        y = "2026"
+        expiry_final = "25-JUN-2026"
+
+    # We use a middle/approximate strike price to get the underlying index values.
+    strikes = {
+        "NIFTY": "24000",
+        "BANKNIFTY": "50000",
+        "FINNIFTY": "22000"
+    }
+    strike = strikes.get(symbol.upper(), "24000")
+
+    url = "https://www.nseindia.com/api/historicalOR/foCPV"
+    params = {
+        "from": from_date,
+        "to": to_date,
+        "instrumentType": "OPTIDX",
+        "symbol": symbol,
+        "year": y,
+        "expiryDate": expiry_final,
+        "optionType": "CE",
+        "strikePrice": strike,
+    }
+    headers = {
+        "user-agent": "Mozilla/5.0",
+        "referer": "https://www.nseindia.com/",
+    }
+
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        rows = resp.json().get("data", [])
+    except Exception as e:
+        print(f"Error in _fetch_historical_data_raw: {e}")
+        rows = []
+
+    output = []
+    for it in rows:
+        ts = it.get("FH_TIMESTAMP")
+        close = it.get("FH_UNDERLYING_VALUE")
+        open_val = it.get("FH_OPENING_PRICE")
+        high = it.get("FH_TRADE_HIGH_PRICE")
+        low = it.get("FH_TRADE_LOW_PRICE")
+
+        if not ts or close is None:
+            continue
+
+        output.append({
+            'date': ts,
+            'open': open_val,
+            'high': high,
+            'low': low,
+            'close': close
+        })
+
+    # The historical analyzer expects chronological data (oldest first).
+    # Since foCPV returns reverse chronological, let's reverse the output.
+    output.reverse()
+    return output
+
+
+def _fetch_historical_data(symbol: str, session: requests.Session, headers: dict, expiry: str = None) -> list:
+    """Fetch historical data for analysis (last 200 days)"""
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=200)
+    
+    from_date = start_date.strftime("%d-%m-%Y")
+    to_date = end_date.strftime("%d-%m-%Y")
+    
+    return _fetch_historical_data_raw(symbol, from_date, to_date, expiry)
+
+
 @analysis_bp.get("/trading_signal")
 def trading_signal():
     """
     Generate CALL/PUT trading signal based on comprehensive analysis
-    
-    Query Parameters:
-    - symbol: Stock/Index symbol (default: NIFTY)
-    - expiry: Expiry date in YYYY-MM-DD format
-    
-    Returns:
-    - signal: CALL, PUT, or NO_TRADE
-    - confidence: HIGH, MEDIUM, or LOW
-    - recommended_strikes: List of recommended strike prices
-    - full analysis data
     """
     symbol = request.args.get("symbol", "NIFTY").upper()
     expiry = request.args.get("expiry")
     
     try:
         # Fetch option chain data
-        chain_url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
-        if expiry:
-            chain_url += f"&expiryDate={expiry}"
+        option_chain_data = fetch_unblocked_option_chain(symbol, expiry)
         
-        headers = get_nse_headers()
-        headers["referer"] = "https://www.nseindia.com/option-chain"
-        headers["accept"] = "application/json"
-        
-        session = requests.Session()
-        session.get("https://www.nseindia.com", headers=headers)
-        
-        chain_resp = session.get(chain_url, headers=headers, timeout=10)
-        option_chain_data = chain_resp.json()
+        # Resolve expiry if not passed
+        if not expiry and option_chain_data.get("records", {}).get("expiryDates"):
+            exp_raw = option_chain_data["records"]["expiryDates"][0]
+            try:
+                # convert e.g. 02-JAN-2025 to YYYY-MM-DD
+                d, mmm, y = exp_raw.split("-")
+                months = [
+                    "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+                    "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+                ]
+                m = str(months.index(mmm.upper()) + 1).zfill(2)
+                expiry = f"{y}-{m}-{d}"
+            except:
+                pass
         
         # Fetch historical data for the underlying
-        hist_data = _fetch_historical_data(symbol, session, headers)
+        session = requests.Session()
+        headers = get_nse_headers()
+        hist_data = _fetch_historical_data(symbol, session, headers, expiry)
         
         # Get market sentiment
         sentiment_analyzer = NewsSentimentAnalyzer()
@@ -89,6 +194,10 @@ def trading_signal():
         })
         
     except Exception as e:
+        import sys
+        import traceback
+        print(f"Error generating trading signal: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         return jsonify({
             'success': False,
             'error': str(e),
@@ -100,35 +209,13 @@ def trading_signal():
 def option_chain_analysis():
     """
     Deep analysis of option chain data
-    
-    Query Parameters:
-    - symbol: Stock/Index symbol (default: NIFTY)
-    - expiry: Expiry date in YYYY-MM-DD format
-    
-    Returns:
-    - PCR analysis
-    - Max Pain calculation
-    - Support/Resistance levels
-    - OI Buildup patterns
-    - Greeks approximation
     """
     symbol = request.args.get("symbol", "NIFTY").upper()
     expiry = request.args.get("expiry")
     
     try:
         # Fetch option chain
-        chain_url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
-        if expiry:
-            chain_url += f"&expiryDate={expiry}"
-        
-        headers = get_nse_headers()
-        headers["referer"] = "https://www.nseindia.com/option-chain"
-        
-        session = requests.Session()
-        session.get("https://www.nseindia.com", headers=headers)
-        
-        resp = session.get(chain_url, headers=headers, timeout=10)
-        option_chain_data = resp.json()
+        option_chain_data = fetch_unblocked_option_chain(symbol, expiry)
         
         # Analyze
         analyzer = OptionChainAnalyzer(option_chain_data)
@@ -157,21 +244,11 @@ def option_chain_analysis():
 def historical_analysis():
     """
     Analyze historical price patterns and trends
-    
-    Query Parameters:
-    - symbol: Stock/Index symbol (default: NIFTY)
-    - fromDate: Start date in DD-MM-YYYY format
-    - toDate: End date in DD-MM-YYYY format
-    
-    Returns:
-    - Moving averages (SMA, EMA)
-    - Trend direction
-    - Candlestick patterns detected
-    - RSI value
     """
     symbol = request.args.get("symbol", "NIFTY").upper()
     from_date = request.args.get("fromDate")
     to_date = request.args.get("toDate")
+    expiry = request.args.get("expiry")
     
     if not from_date or not to_date:
         return jsonify({
@@ -181,7 +258,7 @@ def historical_analysis():
     
     try:
         # Fetch historical data
-        hist_data = _fetch_historical_data_raw(symbol, from_date, to_date)
+        hist_data = _fetch_historical_data_raw(symbol, from_date, to_date, expiry)
         
         # Analyze
         analyzer = HistoricalPatternAnalyzer(hist_data)
@@ -210,12 +287,6 @@ def historical_analysis():
 def market_sentiment():
     """
     Get market sentiment analysis from news
-    
-    Returns:
-    - Global sentiment score
-    - Indian sentiment score
-    - Combined market bias
-    - Key factors affecting sentiment
     """
     try:
         sentiment_report = get_market_sentiment_report()
@@ -250,30 +321,13 @@ def market_sentiment():
 def max_pain():
     """
     Calculate Max Pain point for given symbol and expiry
-    
-    Query Parameters:
-    - symbol: Stock/Index symbol (default: NIFTY)
-    - expiry: Expiry date in YYYY-MM-DD format
-    
-    Returns:
-    - max_pain_strike: Strike price with minimum pain
-    - pain_values: Pain calculations for top strikes
     """
     symbol = request.args.get("symbol", "NIFTY").upper()
     expiry = request.args.get("expiry")
     
     try:
         # Fetch option chain
-        chain_url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
-        if expiry:
-            chain_url += f"&expiryDate={expiry}"
-        
-        headers = get_nse_headers()
-        session = requests.Session()
-        session.get("https://www.nseindia.com", headers=headers)
-        
-        resp = session.get(chain_url, headers=headers, timeout=10)
-        option_chain_data = resp.json()
+        option_chain_data = fetch_unblocked_option_chain(symbol, expiry)
         
         # Calculate max pain
         analyzer = OptionChainAnalyzer(option_chain_data)
@@ -298,31 +352,13 @@ def max_pain():
 def pcr_analysis():
     """
     Get Put-Call Ratio analysis
-    
-    Query Parameters:
-    - symbol: Stock/Index symbol (default: NIFTY)
-    - expiry: Expiry date in YYYY-MM-DD format
-    
-    Returns:
-    - Overall OI PCR
-    - Overall Volume PCR
-    - Strike-wise PCR
     """
     symbol = request.args.get("symbol", "NIFTY").upper()
     expiry = request.args.get("expiry")
     
     try:
         # Fetch option chain
-        chain_url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
-        if expiry:
-            chain_url += f"&expiryDate={expiry}"
-        
-        headers = get_nse_headers()
-        session = requests.Session()
-        session.get("https://www.nseindia.com", headers=headers)
-        
-        resp = session.get(chain_url, headers=headers, timeout=10)
-        option_chain_data = resp.json()
+        option_chain_data = fetch_unblocked_option_chain(symbol, expiry)
         
         # Calculate PCR
         analyzer = OptionChainAnalyzer(option_chain_data)
@@ -342,65 +378,6 @@ def pcr_analysis():
             'success': False,
             'error': str(e)
         }), 500
-
-
-def _fetch_historical_data(symbol: str, session: requests.Session, headers: dict) -> list:
-    """Fetch historical data for analysis"""
-    # Get last 200 days of data
-    end_date = datetime.now()
-    start_date = end_date.replace(day=end_date.day - 200)
-    
-    from_date = start_date.strftime("%d-%m-%Y")
-    to_date = end_date.strftime("%d-%m-%Y")
-    
-    return _fetch_historical_data_raw(symbol, from_date, to_date)
-
-
-def _fetch_historical_data_raw(symbol: str, from_date: str, to_date: str) -> list:
-    """Fetch raw historical data"""
-    names = {
-        "NIFTY": "NIFTY 50",
-        "BANKNIFTY": "NIFTY BANK",
-        "FINNIFTY": "NIFTY FIN SERVICE"
-    }
-    index_name = names.get(symbol.upper(), "NIFTY 50")
-    
-    url = (
-        "https://www.nseindia.com/api/historical/indicesHistory"
-        f"?indexType={index_name.replace(' ', '%20')}"
-        f"&from={from_date}&to={to_date}"
-    )
-    
-    headers = {
-        "user-agent": "Mozilla/5.0",
-        "referer": "https://www.nseindia.com/",
-    }
-    
-    resp = requests.get(url, headers=headers, timeout=10)
-    data = resp.json()
-    
-    rows = data.get("data", {}).get("indexCloseOnlineRecords", [])
-    
-    output = []
-    for it in rows:
-        ts = it.get("EOD_TIMESTAMP")
-        close = it.get("EOD_CLOSE_INDEX_VAL")
-        open_val = it.get("EOD_OPEN_INDEX_VAL")
-        high = it.get("EOD_HIGH_INDEX_VAL")
-        low = it.get("EOD_LOW_INDEX_VAL")
-        
-        if not ts or close is None:
-            continue
-        
-        output.append({
-            'date': ts,
-            'open': open_val,
-            'high': high,
-            'low': low,
-            'close': close
-        })
-    
-    return output
 
 
 def _interpret_pcr(pcr_value: float) -> str:

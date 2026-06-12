@@ -49,7 +49,13 @@ export async function getPrice() {
         renderCombinedChart("combinedChart", labels, cePrices, pePrices, theme);
 
         // NIFTY Chart
-        const niftyURL = buildNiftyURL(baseParams.symbol, baseParams.fromDate, baseParams.toDate);
+        const niftyURL = buildNiftyURL(
+            baseParams.symbol,
+            baseParams.fromDate,
+            baseParams.toDate,
+            baseParams.expiry,
+            baseParams.strike
+        );
         const spotResp = await safeFetch(niftyURL);
         const spotData = Array.isArray(spotResp) ? spotResp : [];
 

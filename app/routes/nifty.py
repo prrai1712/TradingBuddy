@@ -8,58 +8,62 @@ nifty_bp = Blueprint("nifty", __name__)
 @nifty_bp.get("/nifty_spot")
 def nifty_spot():
     symbol = request.args.get("symbol", "NIFTY")
+    expiry = request.args.get("expiry")
+    strike = request.args.get("strike")
     fromDate = request.args.get("fromDate")
     toDate = request.args.get("toDate")
 
-    if not fromDate or not toDate:
-        return jsonify({"error": "Missing date range"}), 400
+    if not all([symbol, expiry, strike, fromDate, toDate]):
+        return jsonify({"error": "Missing params"}), 400
 
-    names = {
-        "NIFTY": "NIFTY 50",
-        "BANKNIFTY": "NIFTY BANK",
+    # Convert expiry YYYY-MM-DD → DD-MMM-YYYY
+    try:
+        y, m, d = expiry.split("-")
+        months = [
+            "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+            "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+        ]
+        expiry_final = f"{d}-{months[int(m)-1]}-{y}"
+    except:
+        return jsonify({"error": "Invalid expiry format"}), 400
+
+    url = "https://www.nseindia.com/api/historicalOR/foCPV"
+
+    params = {
+        "from": fromDate,
+        "to": toDate,
+        "instrumentType": "OPTIDX",
+        "symbol": symbol,
+        "year": y,
+        "expiryDate": expiry_final,
+        "optionType": "CE",
+        "strikePrice": strike,
     }
-    index_name = names.get(symbol.upper(), "NIFTY 50")
 
-    # Convert DD-MM-YYYY → DD-MM-YYYY (same format)
-    f_d, f_m, f_y = fromDate.split("-")
-    t_d, t_m, t_y = toDate.split("-")
-
-    nse_from = f"{f_d}-{f_m}-{f_y}"
-    nse_to = f"{t_d}-{t_m}-{t_y}"
-
-    session = requests.Session()
     headers = {
         "user-agent": "Mozilla/5.0",
         "referer": "https://www.nseindia.com/",
     }
 
-    # Warm-up request
-    session.get("https://www.nseindia.com", headers=headers)
-
-    url = (
-        "https://www.nseindia.com/api/historical/indicesHistory"
-        f"?indexType={index_name.replace(' ', '%20')}"
-        f"&from={nse_from}&to={nse_to}"
-    )
-
-    resp = session.get(url, headers=headers)
-
     try:
-        rows = resp.json().get("data", {}).get("indexCloseOnlineRecords", [])
-    except:
+        resp = requests.get(url, params=params, headers=headers)
+        rows = resp.json().get("data", [])
+    except Exception as e:
+        import sys
+        print(f"Error fetching nifty spot: {e}", file=sys.stderr)
         rows = []
 
     output = []
     for it in rows:
-        ts = it.get("EOD_TIMESTAMP")
-        close = it.get("EOD_CLOSE_INDEX_VAL")
-        if not ts or close is None:
+        val = it.get("FH_UNDERLYING_VALUE")
+        ts = it.get("FH_TIMESTAMP")
+        if val is None or not ts:
             continue
-
-        dt = datetime.datetime.strptime(ts, "%d-%b-%Y")
         output.append({
-            "date": dt.strftime("%d-%m-%Y"),
-            "close": close
+            "date": ts,
+            "close": val
         })
 
+    # Reverse to return chronological order (oldest first)
+    output.reverse()
     return jsonify(output)

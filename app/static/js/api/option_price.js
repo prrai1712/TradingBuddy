@@ -51,6 +51,8 @@ async function getPrice() {
             symbol: baseParams.symbol,
             fromDate: baseParams.fromDate,
             toDate: baseParams.toDate,
+            expiry: baseParams.expiry,
+            strike: baseParams.strike,
         });
 
         const spotResp = await safeFetch(nsURL);
