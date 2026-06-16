@@ -15,84 +15,71 @@ def live_option_data():
         return jsonify({"error": "Missing parameters"}), 400
 
     try:
-        # Parse expiry date
-        expiry_dt = datetime.strptime(expiry, "%Y-%m-%d")
-        today_dt = datetime.now()
+        from app.utils.option_chain_helper import fetch_unblocked_option_chain
+        # Fetch live option chain data
+        chain_data = fetch_unblocked_option_chain(symbol, expiry)
+        
+        if not chain_data.get("data"):
+            return jsonify({"error": "Failed to fetch live option chain data from NSE"}), 502
 
-        # Date range selection: 7 days is enough to ensure we get a trading day
-        if expiry_dt.date() < today_dt.date():
-            # Already expired: take 7 days leading up to expiry date
-            to_date_dt = expiry_dt
-            from_date_dt = expiry_dt - timedelta(days=7)
-        else:
-            # Active/Future contract: take last 7 days leading up to today
-            to_date_dt = today_dt
-            from_date_dt = today_dt - timedelta(days=7)
+        nifty_spot = chain_data.get("records", {}).get("underlyingValue", 0)
+        last_update = chain_data.get("records", {}).get("timestamp", datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
 
-        from_date_str = from_date_dt.strftime("%d-%m-%Y")
-        to_date_str = to_date_dt.strftime("%d-%m-%Y")
+        # Find the specific strike price in the chain
+        strike_val = int(float(strike))
+        strike_data = None
+        for item in chain_data.get("data", []):
+            if int(item.get("strikePrice", 0)) == strike_val:
+                strike_data = item
+                break
 
-        y = expiry_dt.strftime("%Y")
-        m = expiry_dt.strftime("%m")
-        d = expiry_dt.strftime("%d")
-
-        months = [
-            "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-            "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
-        ]
-        expiry_final = f"{d}-{months[int(m)-1]}-{y}"
+        if not strike_data:
+            return jsonify({"error": f"Strike price {strike} not found in option chain"}), 404
 
         results = {}
-
-        url = "https://www.nseindia.com/api/historicalOR/foCPV"
-        headers = {
-            "user-agent": "Mozilla/5.0",
-            "referer": "https://www.nseindia.com/",
-        }
-
         for opt in ["CE", "PE"]:
-            params = {
-                "from": from_date_str,
-                "to": to_date_str,
-                "instrumentType": "OPTIDX",
-                "symbol": symbol,
-                "year": y,
-                "expiryDate": expiry_final,
-                "optionType": opt,
-                "strikePrice": strike,
-            }
-
-            resp = requests.get(url, params=params, headers=headers, timeout=5)
-            data = resp.json()
-            rows = data.get("data", [])
-
-            if not rows:
-                results[opt] = {"error": "No data available in the selected range"}
-                continue
-
-            # rows are returned in reverse chronological order (newest first).
-            # We take the first element (index 0) as the latest available data point.
-            latest = rows[0]
+            opt_data = strike_data.get(opt, {})
+            ltp = opt_data.get("lastPrice", 0) or 0
+            volume = opt_data.get("totalTradedVolume", 0) or 0
+            traded_value = volume * ltp
 
             results[opt] = {
-                "ltp": latest.get("FH_LAST_TRADED_PRICE"),
-                "open": latest.get("FH_OPENING_PRICE"),
-                "high": latest.get("FH_TRADE_HIGH_PRICE"),
-                "low": latest.get("FH_TRADE_LOW_PRICE"),
-                "oi": latest.get("FH_OPEN_INT"),
-                "oi_change": latest.get("FH_CHANGE_IN_OI"),
-                "traded_value": latest.get("FH_TOT_TRADED_VAL"),
-                "underlying": latest.get("FH_UNDERLYING_VALUE"),
-                "last_update": latest.get("FH_TIMESTAMP"),
+                "ltp": ltp,
+                "open": "-",
+                "high": "-",
+                "low": "-",
+                "oi": opt_data.get("openInterest", 0),
+                "oi_change": opt_data.get("changeinOpenInterest", 0),
+                "traded_value": traded_value,
+                "underlying": nifty_spot,
+                "last_update": last_update,
             }
 
-        # Nifty Spot from CE record
-        try:
-            results["nifty_spot"] = results["CE"].get("underlying")
-        except:
-            results["nifty_spot"] = None
-
+        # Nifty Spot from underlying value
+        results["nifty_spot"] = nifty_spot
         return jsonify(results)
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@live_bp.get("/market_status")
+def market_status():
+    url = "https://www.nseindia.com/api/marketStatus"
+    headers = {
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept": "*/*",
+        "accept-language": "en-IN,en-GB;q=0.9,en-US;q=0.8,en;q=0.7,hi;q=0.6",
+        "referer": "https://www.nseindia.com/option-chain",
+        "cache-control": "no-cache",
+        "pragma": "no-cache",
+    }
+    try:
+        session = requests.Session()
+        session.get("https://www.nseindia.com/option-chain", headers=headers, timeout=5)
+        resp = session.get(url, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            return jsonify(resp.json())
+        return jsonify({"error": f"Failed to fetch market status: {resp.status_code}"}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -73,3 +73,86 @@ async function fetchPCRAnalysisForLive(symbol, expiry) {
         console.error('Error fetching PCR for live data:', error);
     }
 }
+
+async function loadMarketStatus() {
+    try {
+        const response = await fetch("/market_status");
+        if (!response.ok) return;
+        const data = await response.json();
+
+        // 1. Find NIFTY 50 from marketState
+        const states = data.marketState || [];
+        const niftyState = states.find(s => s.index === "NIFTY 50");
+
+        if (niftyState) {
+            const niftyPrice = niftyState.last;
+            const niftyChange = niftyState.percentChange;
+            const sign = niftyChange >= 0 ? "▲" : "▼";
+            const color = niftyChange >= 0 ? "#34d399" : "#f87171";
+
+            // Update liveNiftyBadge in header
+            const niftyBadge = document.getElementById("liveNiftyBadge");
+            if (niftyBadge) {
+                niftyBadge.innerHTML = `NIFTY: <b>${niftyPrice}</b> <span style="font-size:12px; margin-left:5px; color:${color}">${sign} ${Math.abs(niftyChange).toFixed(2)}%</span>`;
+            }
+
+            // Also update niftyLive text in Dashboard if it exists
+            const niftyLive = document.getElementById("niftyLive");
+            if (niftyLive) {
+                niftyLive.innerHTML = `NIFTY Spot (Live): <b>${niftyPrice}</b> <span style="margin-left:8px; color:${color}">${sign} ${Math.abs(niftyChange).toFixed(2)}%</span>`;
+            }
+        }
+
+        // 2. Update Market Status Dot and Text
+        const capMarket = states.find(s => s.market === "Capital Market");
+        if (capMarket) {
+            const status = capMarket.marketStatus; // "Open" or "Closed"
+            const statusMessage = capMarket.marketStatusMessage || "";
+            const marketStatusText = document.querySelector(".market-status");
+
+            if (marketStatusText) {
+                marketStatusText.innerHTML = `<span class="status-dot"></span> ${status}`;
+                const statusDot = marketStatusText.querySelector(".status-dot");
+                if (statusDot) {
+                    if (status.toLowerCase() === "open") {
+                        statusDot.style.backgroundColor = "var(--success)";
+                    } else {
+                        statusDot.style.backgroundColor = "var(--danger)";
+                    }
+                }
+                marketStatusText.title = statusMessage;
+            }
+        }
+
+        // 3. Add GIFT NIFTY badge
+        const giftNifty = data.giftnifty;
+        if (giftNifty) {
+            let giftBadge = document.getElementById("giftNiftyBadge");
+            if (!giftBadge) {
+                giftBadge = document.createElement("div");
+                giftBadge.id = "giftNiftyBadge";
+                giftBadge.className = "live-nifty-badge";
+                giftBadge.style.background = "linear-gradient(135deg, #6366f1, #4f46e5)"; // nice indigo color
+                giftBadge.style.marginLeft = "10px";
+                const niftyBadge = document.getElementById("liveNiftyBadge");
+                if (niftyBadge) {
+                    niftyBadge.parentNode.insertBefore(giftBadge, niftyBadge.nextSibling);
+                }
+            }
+
+            if (giftBadge) {
+                const giftPrice = giftNifty.LASTPRICE;
+                const giftChange = giftNifty.PERCHANGE;
+                const sign = giftChange >= 0 ? "▲" : "▼";
+                const color = giftChange >= 0 ? "#34d399" : "#f87171";
+                giftBadge.innerHTML = `GIFT NIFTY: <b>${giftPrice}</b> <span style="font-size:12px; margin-left:5px; color:${color}">${sign} ${Math.abs(giftChange).toFixed(2)}%</span>`;
+            }
+        }
+    } catch (error) {
+        console.error("Error loading market status:", error);
+    }
+}
+
+// Expose to window
+window.loadMarketStatus = loadMarketStatus;
+

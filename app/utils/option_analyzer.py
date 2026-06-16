@@ -70,7 +70,7 @@ class OptionChainAnalyzer:
         Calculate Max Pain point - the strike where option writers have minimum loss
         """
         if not self.strike_data:
-            return {'max_pain_strike': 0, 'total_pain': 0}
+            return {'max_pain_strike': 0, 'total_pain': 0, 'all_pain_points': []}
         
         pain_calculations = []
         
@@ -108,6 +108,19 @@ class OptionChainAnalyzer:
         Approximate Greeks calculation for ATM options
         Using simplified Black-Scholes approximations
         """
+        if not self.strike_data:
+            return {
+                'atm_strike': 0,
+                'call_ltp': 0,
+                'put_ltp': 0,
+                'estimated_iv': 0,
+                'call_oi_change': 0,
+                'put_oi_change': 0,
+                'call_volume': 0,
+                'put_volume': 0,
+                'put_call_ratio': 0
+            }
+
         atm_strike = min(self.strike_data, 
                         key=lambda x: abs(x.get('strikePrice', 0) - self.underlying_value))
         

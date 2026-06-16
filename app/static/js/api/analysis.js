@@ -1,5 +1,7 @@
 // API module for trading signals and analysis endpoints
 
+let historicalChartInstance = null;
+
 async function fetchTradingSignal() {
     const symbol = document.getElementById("symbol").value;
     const expiry = document.getElementById("expiry").value;
@@ -20,7 +22,7 @@ async function fetchTradingSignal() {
         
         // Update hero signal card
         const signalText = response.signal === 'CALL' ? '🟢 CALL' : 
-                          response.signal === 'PUT' ? '🔴 PUT' : '⚪ NO TRADE';
+                           response.signal === 'PUT' ? '🔴 PUT' : '⚪ NO TRADE';
         
         document.getElementById('heroSignalValue').textContent = signalText;
         document.getElementById('heroConfidence').textContent = `Confidence: ${response.confidence}`;
@@ -42,7 +44,7 @@ async function fetchTradingSignal() {
         // Update signal summary
         document.getElementById('signalSummary').innerHTML = `
             <h4>Analysis Summary</h4>
-            <p>${response.analysis_summary}</p>
+            <p>${response.analysis_summary?.pcr ? `PCR is <b>${response.analysis_summary.pcr}</b>, Trend is <b>${response.analysis_summary.trend}</b>, RSI is <b>${response.analysis_summary.rsi}</b>` : response.analysis_summary || 'Analysis complete.'}</p>
         `;
         
         console.log('Trading signal loaded successfully');
@@ -85,11 +87,12 @@ function updateMainSignalDisplay(data) {
     const recContainer = document.getElementById('signalRecommendations');
     if (data.recommended_strikes && data.recommended_strikes.length > 0) {
         recContainer.innerHTML = `
-            <h4>Recommended Strikes</h4>
             <div class="levels-grid">
-                ${data.recommended_strikes.map(strike => `
-                    <div class="detail-item">
-                        <span class="detail-value">${strike}</span>
+                ${data.recommended_strikes.map(item => `
+                    <div class="detail-item" style="min-width: 150px;">
+                        <span class="detail-label">${item.type || 'STRIKE'}</span>
+                        <span class="detail-value">${item.strike || item}</span>
+                        <span class="detail-label" style="font-size: 11px; margin-top: 4px;">${item.reason || ''}</span>
                     </div>
                 `).join('')}
             </div>
@@ -107,34 +110,19 @@ function updateKeyLevels(levels) {
         return;
     }
     
+    // Support & resistance list mapping
     container.innerHTML = `
         <div class="detail-item">
+            <span class="detail-label">Max Pain</span>
+            <span class="detail-value" style="color: var(--primary);">${levels.max_pain || '--'}</span>
+        </div>
+        <div class="detail-item">
             <span class="detail-label">Strong Resistance</span>
-            <span class="detail-value text-bearish">${levels.resistance_3 || '--'}</span>
-        </div>
-        <div class="detail-item">
-            <span class="detail-label">Resistance 2</span>
-            <span class="detail-value">${levels.resistance_2 || '--'}</span>
-        </div>
-        <div class="detail-item">
-            <span class="detail-label">Resistance 1</span>
-            <span class="detail-value">${levels.resistance_1 || '--'}</span>
-        </div>
-        <div class="detail-item">
-            <span class="detail-label">Current Price</span>
-            <span class="detail-value">${levels.current || '--'}</span>
-        </div>
-        <div class="detail-item">
-            <span class="detail-label">Support 1</span>
-            <span class="detail-value">${levels.support_1 || '--'}</span>
-        </div>
-        <div class="detail-item">
-            <span class="detail-label">Support 2</span>
-            <span class="detail-value">${levels.support_2 || '--'}</span>
+            <span class="detail-value text-bearish">${levels.resistance || '--'}</span>
         </div>
         <div class="detail-item">
             <span class="detail-label">Strong Support</span>
-            <span class="detail-value text-bullish">${levels.support_3 || '--'}</span>
+            <span class="detail-value text-bullish">${levels.support || '--'}</span>
         </div>
     `;
 }
@@ -175,6 +163,16 @@ async function fetchMarketSentiment() {
             return null;
         }
         
+        // Update combined sentiment details
+        document.getElementById('sentimentScoreValue').textContent = response.combined_score?.toFixed(2) || '--';
+        document.getElementById('sentimentBiasDisplay').textContent = response.market_bias || '--';
+        document.getElementById('sentimentConfidence').textContent = `Confidence: ${response.confidence || '--'}`;
+        
+        if (window.drawGauge) {
+            // Map news sentiment score (-10 to 10) to (-1 to 1) for the gauge component
+            window.drawGauge(response.combined_score / 10);
+        }
+
         // Update global sentiment content
         document.getElementById('globalSentimentContent').innerHTML = `
             <div class="metric-row">
@@ -183,7 +181,7 @@ async function fetchMarketSentiment() {
             </div>
             <div class="metric-row">
                 <span class="metric-label">Classification:</span>
-                <span class="metric-value">${response.global_sentiment.classification || '--'}</span>
+                <span class="metric-value">${response.global_sentiment.overall_classification || '--'}</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">News Count:</span>
@@ -199,7 +197,7 @@ async function fetchMarketSentiment() {
             </div>
             <div class="metric-row">
                 <span class="metric-label">Classification:</span>
-                <span class="metric-value">${response.indian_sentiment.classification || '--'}</span>
+                <span class="metric-value">${response.indian_sentiment.overall_classification || '--'}</span>
             </div>
             <div class="metric-row">
                 <span class="metric-label">News Count:</span>
@@ -285,7 +283,7 @@ async function fetchMaxPain() {
         document.getElementById('maxPainContent').innerHTML = `
             <div class="metric-row">
                 <span class="metric-label">Max Pain Strike:</span>
-                <span class="metric-value" style="font-size: 24px; color: var(--primary);">
+                <span class="metric-value" style="font-size: 24px; color: var(--primary); font-weight: bold;">
                     ${response.max_pain_strike || '--'}
                 </span>
             </div>
@@ -330,31 +328,43 @@ async function fetchHistoricalAnalysis() {
                 <span class="metric-value">${response.moving_averages?.sma_20 || '--'}</span>
             </div>
             <div class="metric-row">
-                <span class="metric-label">EMA (20):</span>
-                <span class="metric-value">${response.moving_averages?.ema_20 || '--'}</span>
+                <span class="metric-label">SMA (50):</span>
+                <span class="metric-value">${response.moving_averages?.sma_50 || '--'}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">SMA (200):</span>
+                <span class="metric-value">${response.moving_averages?.sma_200 || '--'}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">EMA (9):</span>
+                <span class="metric-value">${response.moving_averages?.ema_9 || '--'}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">EMA (21):</span>
+                <span class="metric-value">${response.moving_averages?.ema_21 || '--'}</span>
             </div>
         `;
         
         // Update trend
+        const isBullish = response.trend?.includes('UP');
+        const isBearish = response.trend?.includes('DOWN');
+        const colorClass = isBullish ? 'text-bullish' : (isBearish ? 'text-bearish' : '');
         document.getElementById('trendContent').innerHTML = `
             <div class="metric-row">
-                <span class="metric-label">Direction:</span>
-                <span class="metric-value ${response.trend?.direction === 'UP' ? 'text-bullish' : 
-                                            response.trend?.direction === 'DOWN' ? 'text-bearish' : ''}">
-                    ${response.trend?.direction || '--'}
+                <span class="metric-label">Trend:</span>
+                <span class="metric-value ${colorClass}">
+                    ${response.trend || '--'}
                 </span>
-            </div>
-            <div class="metric-row">
-                <span class="metric-label">Strength:</span>
-                <span class="metric-value">${response.trend?.strength || '--'}</span>
             </div>
         `;
         
         // Update patterns
         const patternsContainer = document.getElementById('patternsContent');
         if (response.patterns && response.patterns.length > 0) {
-            patternsContainer.innerHTML = response.patterns.map(pattern => `
-                <div class="factor-item" style="margin-bottom: 8px;">${pattern}</div>
+            patternsContainer.innerHTML = response.patterns.map(p => `
+                <div class="factor-item" style="margin-bottom: 8px;">
+                    <b>${p.pattern}</b> on ${p.date} (${p.significance})
+                </div>
             `).join('');
         } else {
             patternsContainer.innerHTML = '<p>No patterns detected</p>';
@@ -374,9 +384,73 @@ async function fetchHistoricalAnalysis() {
                 </span>
             </div>
         `;
+
+        // Render historical close chart
+        if (response.historical_data && response.historical_data.length > 0) {
+            drawHistoricalChart(response.historical_data);
+        }
         
     } catch (error) {
         console.error('Error fetching historical analysis:', error);
         alert('Error loading historical analysis');
     }
 }
+
+function drawHistoricalChart(spotData) {
+    const ctx = document.getElementById("historicalChart");
+    if (!ctx) return;
+
+    if (historicalChartInstance) {
+        historicalChartInstance.destroy();
+    }
+
+    const theme = window.getChartTheme ? window.getChartTheme() : { grid: "rgba(0,0,0,0.1)", text: "#333", tooltipBg: "#f4f4f4" };
+
+    historicalChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: spotData.map(x => x.date),
+            datasets: [
+                {
+                    label: "Spot Close",
+                    data: spotData.map(x => x.close),
+                    borderColor: "#3d7cff",
+                    backgroundColor: "rgba(61, 124, 255, 0.15)",
+                    borderWidth: 2,
+                    tension: 0.15,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: theme.text } },
+                tooltip: {
+                    backgroundColor: theme.tooltipBg,
+                    titleColor: theme.text,
+                    bodyColor: theme.text
+                }
+            },
+            scales: {
+                x: { 
+                    ticks: { color: theme.text }, 
+                    grid: { color: theme.grid }
+                },
+                y: { 
+                    ticks: { color: theme.text }, 
+                    grid: { color: theme.grid }
+                }
+            }
+        }
+    });
+}
+
+// Expose functions to window
+window.fetchTradingSignal = fetchTradingSignal;
+window.fetchMarketSentiment = fetchMarketSentiment;
+window.fetchPCRAnalysis = fetchPCRAnalysis;
+window.fetchMaxPain = fetchMaxPain;
+window.fetchHistoricalAnalysis = fetchHistoricalAnalysis;
+window.drawHistoricalChart = drawHistoricalChart;

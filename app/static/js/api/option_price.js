@@ -73,6 +73,11 @@ async function getPrice() {
     // Load live data
     await loadLiveData();
 
+    // Load market status
+    if (window.loadMarketStatus) {
+        await window.loadMarketStatus();
+    }
+
     // Load full chain and render table
     const fullChain = await loadFullChain();
     window.currentOptionChain = fullChain;  // Store for filtering
@@ -92,6 +97,13 @@ async function getPrice() {
     const signal = sentiment.finalScore > 0.2 ? 'CALL' : 
                    sentiment.finalScore < -0.2 ? 'PUT' : 'NEUTRAL';
     drawMiniSignalChart(signal);
+
+    // Refresh all analysis tabs from backend
+    if (window.fetchTradingSignal) window.fetchTradingSignal();
+    if (window.fetchMarketSentiment) window.fetchMarketSentiment();
+    if (window.fetchPCRAnalysis) window.fetchPCRAnalysis();
+    if (window.fetchMaxPain) window.fetchMaxPain();
+    if (window.fetchHistoricalAnalysis) window.fetchHistoricalAnalysis();
 }
 
 function updateHeroSignalFromSentiment(score) {

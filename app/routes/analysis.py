@@ -273,7 +273,8 @@ def historical_analysis():
             'moving_averages': analysis['moving_averages'],
             'trend': analysis['trend'],
             'patterns': analysis['patterns'],
-            'rsi': analysis['rsi']
+            'rsi': analysis['rsi'],
+            'historical_data': hist_data
         })
         
     except Exception as e:

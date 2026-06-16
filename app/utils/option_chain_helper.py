@@ -28,105 +28,88 @@ def fetch_unblocked_option_chain(symbol: str, expiry: str = None) -> dict:
         except:
             expiry = "2026-06-25"
 
-    # Convert expiry YYYY-MM-DD → DD-MMM-YYYY
+    # Convert expiry YYYY-MM-DD → DD-Mmm-YYYY (title cased)
     try:
-        expiry_final = format_expiry(expiry)
-        y = expiry.split("-")[0]
-    except:
-        expiry_final = "25-JUN-2026"
-        y = "2026"
+        expiry_final = format_expiry(expiry).title()
+    except Exception:
+        expiry_final = "25-Jun-2026"
 
-    # Query foCPV for the expiry date to get all strikes
-    expiry_dt = datetime.strptime(expiry if expiry else "2026-06-25", "%Y-%m-%d")
-    today_dt = datetime.now()
+    is_index = symbol.upper() in ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYIT"]
+    symbol_type = "Indices" if is_index else "Equities"
 
-    if expiry_dt.date() < today_dt.date():
-        query_date = expiry_dt.strftime("%d-%m-%Y")
-    else:
-        query_date = today_dt.strftime("%d-%m-%Y")
-
-    url = "https://www.nseindia.com/api/historicalOR/foCPV"
-    params = {
-        "from": query_date,
-        "to": query_date,
-        "instrumentType": "OPTIDX",
-        "symbol": symbol,
-        "year": y,
-        "expiryDate": expiry_final,
-    }
+    url = f"https://www.nseindia.com/api/option-chain-v3?type={symbol_type}&symbol={symbol.upper()}&expiry={expiry_final}"
     headers = {
-        "user-agent": "Mozilla/5.0",
-        "referer": "https://www.nseindia.com/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "accept": "*/*",
+        "accept-language": "en-IN,en-GB;q=0.9,en-US;q=0.8,en;q=0.7,hi;q=0.6",
+        "referer": "https://www.nseindia.com/option-chain",
+        "cache-control": "no-cache",
+        "pragma": "no-cache",
     }
 
-    rows = []
+    data_list = []
+    underlying_value = 0
+    timestamp = datetime.now().strftime("%d-%b-%Y %H:%M:%S")
+
     try:
-        resp = requests.get(url, params=params, headers=headers, timeout=5)
-        data = resp.json()
-        rows = data.get("data", [])
+        session = requests.Session()
+        session.get("https://www.nseindia.com/option-chain", headers=headers, timeout=5)
+        resp = session.get(url, headers=headers, timeout=5)
         
-        # If the query_date returned nothing (e.g. holiday or weekend),
-        # query the last 7 days to find the latest active trading day!
-        if not rows:
-            from_date_str = (expiry_dt - timedelta(days=7) if expiry_dt.date() < today_dt.date() else today_dt - timedelta(days=7)).strftime("%d-%m-%Y")
-            params["from"] = from_date_str
-            resp = requests.get(url, params=params, headers=headers, timeout=5)
-            rows = resp.json().get("data", [])
+        if resp.status_code == 200:
+            resp_data = resp.json()
+            raw_records = resp_data.get("records", {})
+            underlying_value = raw_records.get("underlyingValue", 0)
+            timestamp = raw_records.get("timestamp", timestamp)
+            raw_data = raw_records.get("data", [])
+
+            for it in raw_data:
+                strike = it.get("strikePrice")
+                if strike is None:
+                    continue
+                strike = int(strike)
+
+                ce = it.get("CE", {})
+                pe = it.get("PE", {})
+
+                def map_option_fields(opt):
+                    if not opt:
+                        return {}
+                    return {
+                        "underlyingValue": opt.get("underlyingValue", underlying_value),
+                        "openInterest": opt.get("openInterest", 0),
+                        "changeinOpenInterest": opt.get("changeinOpenInterest", 0),
+                        "changeinOI": opt.get("changeinOpenInterest", 0),
+                        "pchangeinOpenInterest": opt.get("pchangeinOpenInterest", 0),
+                        "pchgopeninterest": opt.get("pchangeinOpenInterest", 0),
+                        "totalTradedVolume": opt.get("totalTradedVolume", 0),
+                        "lastPrice": opt.get("lastPrice", 0),
+                        "pChange": opt.get("pChange", 0),
+                        "change": opt.get("change", 0),
+                        "impliedVolatility": opt.get("impliedVolatility", 0),
+                        "totalBuyQuantity": opt.get("totalBuyQuantity", 0),
+                        "totalSellQuantity": opt.get("totalSellQuantity", 0),
+                    }
+
+                data_list.append({
+                    "strikePrice": strike,
+                    "CE": map_option_fields(ce),
+                    "PE": map_option_fields(pe),
+                })
+        else:
+            print(f"Failed to fetch option chain, status: {resp.status_code}")
     except Exception as e:
         print(f"Error fetching option chain: {e}")
-        rows = []
-
-    # If rows contains multiple days, filter to get only the most recent day's data
-    if rows:
-        latest_date = rows[0].get("FH_TIMESTAMP")
-        rows = [r for r in rows if r.get("FH_TIMESTAMP") == latest_date]
-
-    # Group by strike price
-    strikes_dict = {}
-    underlying_value = 0
-
-    for it in rows:
-        strike = it.get("FH_STRIKE_PRICE")
-        if strike is None:
-            continue
-        strike = int(strike)
-        
-        opt_type = it.get("FH_OPTION_TYPE")
-        if opt_type not in ["CE", "PE"]:
-            continue
-            
-        underlying = it.get("FH_UNDERLYING_VALUE")
-        if underlying:
-            underlying_value = underlying
-            
-        if strike not in strikes_dict:
-            strikes_dict[strike] = {
-                "strikePrice": strike,
-                "CE": {},
-                "PE": {}
-            }
-            
-        # Map fields to match standard option chain response
-        strikes_dict[strike][opt_type] = {
-            "underlyingValue": underlying,
-            "openInterest": it.get("FH_OPEN_INT"),
-            "changeinOpenInterest": it.get("FH_CHANGE_IN_OI"),
-            "totalTradedVolume": it.get("FH_TOT_TRADED_QTY"),
-            "lastPrice": it.get("FH_LAST_TRADED_PRICE"),
-            "pChange": it.get("FH_CHANGE_IN_OI"),
-            "pchgopeninterest": 0,
-            "impliedVolatility": 0
-        }
 
     # Sort strikes ascending
-    sorted_strikes = sorted(strikes_dict.keys())
-    data_list = [strikes_dict[s] for s in sorted_strikes]
+    data_list.sort(key=lambda x: x["strikePrice"])
 
     return {
         "records": {
             "strikeData": data_list,
             "underlyingValue": underlying_value,
-            "expiryDates": [expiry_final]
+            "expiryDates": [expiry_final],
+            "timestamp": timestamp
         },
         "filtered": {
             "data": data_list
